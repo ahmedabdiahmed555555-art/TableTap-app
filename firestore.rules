@@ -1,0 +1,50 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Menu Items: Anyone can read, but only signed in (future admins) can write
+    match /menuItems/{itemId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Orders: Anyone can create (customers don't need login), 
+    // but only staff (signed in) can read and update
+    match /orders/{orderId} {
+      function isValidOrder(data) {
+        return data.tableNumber is string && data.tableNumber.size() < 10
+          && data.items is list
+          && data.status in ['pending', 'preparing', 'served']
+          && data.total is number;
+      }
+
+      allow create: if isValidOrder(incoming());
+      allow list, get: if isSignedIn();
+      allow update: if isSignedIn() 
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status'])
+        && incoming().status in ['pending', 'preparing', 'served'];
+    }
+  }
+}

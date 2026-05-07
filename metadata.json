@@ -1,0 +1,6 @@
+{
+  "name": "TableTap",
+  "description": "A smart restaurant ordering system with real-time order tracking and QR-code table detection.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
